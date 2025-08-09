@@ -4,7 +4,7 @@ from strategies.strategy_trend_following import trend_following_signal
 from strategies.strategy_mean_reversion import mean_reversion_signal
 from strategies.strategy_breakout_retest import breakout_retest_signal
 from strategies.strategy_intraday_momentum import intraday_momentum_spike
-from datafeeds.coingecko import fetch_coingecko_data
+from datafeeds.coingecko import fetch_coingecko_multi
 from alerts.telegram_bot import send_telegram_alert
 import os
 
@@ -17,7 +17,7 @@ symbol_map = {
     "SOLUSDT": "solana"
 }
 
-ASSETS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "SOLUSDT"]
+ASSETS = list(symbol_map.keys())
 
 def ensure_logs_dir():
     os.makedirs("logs", exist_ok=True)
@@ -26,15 +26,11 @@ def main():
     ensure_logs_dir()
     signals = []
 
-    for symbol in ASSETS:
-        # Fetch daily price data from CoinGecko
-        try:
-            df = fetch_coingecko_data(symbol_map[symbol])
-        except Exception as e:
-            print(f"[ERR] fetch_coingecko_data({symbol}) -> {e}")
-            print(f"[WARN] No data for {symbol}")
-            continue
+    # Fetch all data in one go to avoid hitting API rate limits
+    all_data = fetch_coingecko_multi(symbol_map)
 
+    for symbol in ASSETS:
+        df = all_data.get(symbol)
         if df is None or df.empty:
             print(f"[WARN] No data for {symbol}")
             continue
