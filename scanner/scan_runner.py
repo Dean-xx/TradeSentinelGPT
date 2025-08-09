@@ -1,4 +1,3 @@
-# scanner/scan_runner.py
 import pandas as pd
 from strategies.strategy_trend_following import trend_following_signal
 from strategies.strategy_mean_reversion import mean_reversion_signal
