@@ -1,15 +1,23 @@
 # scanner/scan_runner.py
-
 import pandas as pd
 from strategies.strategy_trend_following import trend_following_signal
 from strategies.strategy_mean_reversion import mean_reversion_signal
 from strategies.strategy_breakout_retest import breakout_retest_signal
 from strategies.strategy_intraday_momentum import intraday_momentum_spike
-from datafeeds.binance import fetch_binance_data
+from datafeeds.coingecko import fetch_coingecko_data
 from alerts.telegram_bot import send_telegram_alert
 import os
 
-ASSETS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "SOLUSDT"]  # You can add more symbols here later
+# Map symbol tickers to CoinGecko IDs
+symbol_map = {
+    "BTCUSDT": "bitcoin",
+    "ETHUSDT": "ethereum",
+    "BNBUSDT": "binancecoin",
+    "XRPUSDT": "ripple",
+    "SOLUSDT": "solana"
+}
+
+ASSETS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "SOLUSDT"]
 
 def ensure_logs_dir():
     os.makedirs("logs", exist_ok=True)
@@ -19,8 +27,14 @@ def main():
     signals = []
 
     for symbol in ASSETS:
-        # Fetch daily price data for strategies needing it
-        df = fetch_binance_data(symbol)
+        # Fetch daily price data from CoinGecko
+        try:
+            df = fetch_coingecko_data(symbol_map[symbol])
+        except Exception as e:
+            print(f"[ERR] fetch_coingecko_data({symbol}) -> {e}")
+            print(f"[WARN] No data for {symbol}")
+            continue
+
         if df is None or df.empty:
             print(f"[WARN] No data for {symbol}")
             continue
