@@ -4,17 +4,17 @@ from strategies.strategy_trend_following import trend_following_signal
 from strategies.strategy_mean_reversion import mean_reversion_signal
 from strategies.strategy_breakout_retest import breakout_retest_signal
 from strategies.strategy_intraday_momentum import intraday_momentum_spike
-from datafeeds.coingecko import fetch_coingecko_multi
+from datafeeds.yahoo_finance import fetch_yahoo_data
 from alerts.telegram_bot import send_telegram_alert
 import os
 
-# Map symbol tickers to CoinGecko IDs
+# Map our symbols to Yahoo Finance tickers
 symbol_map = {
-    "BTCUSDT": "bitcoin",
-    "ETHUSDT": "ethereum",
-    "BNBUSDT": "binancecoin",
-    "XRPUSDT": "ripple",
-    "SOLUSDT": "solana"
+    "BTCUSDT": "BTC-USD",
+    "ETHUSDT": "ETH-USD",
+    "BNBUSDT": "BNB-USD",
+    "XRPUSDT": "XRP-USD",
+    "SOLUSDT": "SOL-USD"
 }
 
 ASSETS = list(symbol_map.keys())
@@ -26,11 +26,8 @@ def main():
     ensure_logs_dir()
     signals = []
 
-    # Fetch all data in one go to avoid hitting API rate limits
-    all_data = fetch_coingecko_multi(symbol_map)
-
     for symbol in ASSETS:
-        df = all_data.get(symbol)
+        df = fetch_yahoo_data(symbol_map[symbol])
         if df is None or df.empty:
             print(f"[WARN] No data for {symbol}")
             continue
