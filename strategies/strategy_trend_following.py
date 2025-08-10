@@ -15,27 +15,38 @@ def trend_following_signal(df):
     - RSI below 35 (oversold in an uptrend)
     """
 
+    if df is None or df.empty:
+        return None
+
+    # Handle MultiIndex (flatten it)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [' '.join(col).strip() for col in df.columns.values]
+
+    # Find the close column (case-insensitive)
+    close_col = next((col for col in df.columns if col.lower() == "close"), None)
+    if not close_col:
+        print("[ERR] No Close column found in data")
+        return None
+
     # Make sure Close is numeric
-    df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+    df[close_col] = pd.to_numeric(df[close_col], errors="coerce")
 
     # Calculate indicators
-    df["MA20"] = df["Close"].rolling(20).mean()
-    df["MA50"] = df["Close"].rolling(50).mean()
-    df["RSI"] = _rsi(df["Close"], period=14)
+    df["MA20"] = df[close_col].rolling(20).mean()
+    df["MA50"] = df[close_col].rolling(50).mean()
+    df["RSI"] = _rsi(df[close_col], period=14)
 
     # Get last row
-    if df.empty:
-        return None
     last = df.iloc[-1]
 
     # Conditions
     if (
         pd.notnull(last["MA20"]) and
         pd.notnull(last["MA50"]) and
-        last["Close"] > last["MA20"] > last["MA50"] and
+        last[close_col] > last["MA20"] > last["MA50"] and
         last["RSI"] < 35
     ):
-        entry = last["Close"]
+        entry = last[close_col]
         sl = last["MA50"]  # stop loss at MA50
         tp = entry * 1.03  # target 3% above entry
         score = 75
@@ -52,3 +63,4 @@ def trend_following_signal(df):
         }
 
     return None
+
