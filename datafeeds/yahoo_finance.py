@@ -1,36 +1,69 @@
-# datafeeds/yahoo_finance.py
-import yfinance as yf
 import pandas as pd
+import yfinance as yf
 
-def fetch_yahoo_data(symbol="BTC-USD", period="120d", interval="1d"):
-    """
-    Fetch historical market data from Yahoo Finance.
-    Matches Binance column format for strategy compatibility.
-    """
+# Map Binance-style symbols to Yahoo Finance tickers
+SYMBOL_MAP = {
+    "BTCUSDT": "BTC-USD",
+    "ETHUSDT": "ETH-USD",
+    "BNBUSDT": "BNB-USD",
+    "XRPUSDT": "XRP-USD",
+    "SOLUSDT": "SOL-USD",
+    # Add forex/stocks here as needed
+}
+
+def fetch_yahoo(symbol, period="90d", interval="1d"):
+    if symbol not in SYMBOL_MAP:
+        print(f"[ERR] {symbol} not mapped to Yahoo Finance ticker")
+        return pd.DataFrame()
+
+    yahoo_symbol = SYMBOL_MAP[symbol]
     try:
-        # Force auto_adjust=False so we keep OHLC columns
-        df = yf.download(
-            symbol,
-            period=period,
-            interval=interval,
-            progress=False,
-            auto_adjust=False
-        )
-        if df.empty:
-            return None
+        df = yf.download(yahoo_symbol, period=period, interval=interval, progress=False)
         df.reset_index(inplace=True)
-        # Match Binance-style column names
-        df.rename(columns={
-            "Date": "open_time",
-            "Open": "Open",
-            "High": "High",
-            "Low": "Low",
-            "Close": "Close",
-            "Volume": "Volume"
-        }, inplace=True)
-        df["close_time"] = df["open_time"]
-        return df
     except Exception as e:
-        print(f"[ERR] fetch_yahoo_data({symbol}) -> {e}")
-        return None
+        print(f"[ERR] Yahoo fetch failed for {symbol}: {e}")
+        return pd.DataFrame()
 
+    # Ensure standard OHLCV column names
+    if not {"Open", "High", "Low", "Close", "Volume"}.issubset(df.columns):
+        print(f"[ERR] Missing OHLC columns in Yahoo data for {symbol}")
+        return pd.DataFrame()
+
+    return df
+
+    import pandas as pd
+import yfinance as yf
+
+# Map Binance-style symbols to Yahoo Finance tickers
+SYMBOL_MAP = {
+    "BTCUSDT": "BTC-USD",
+    "ETHUSDT": "ETH-USD",
+    "BNBUSDT": "BNB-USD",
+    "XRPUSDT": "XRP-USD",
+    "SOLUSDT": "SOL-USD",
+    # You can add forex/stocks here:
+    "EURUSD": "EURUSD=X",
+    "GBPUSD": "GBPUSD=X",
+    "AAPL": "AAPL"
+}
+
+def fetch_yahoo(symbol, period="90d", interval="1d"):
+    """Fetch OHLCV data from Yahoo Finance for the given symbol."""
+    if symbol not in SYMBOL_MAP:
+        print(f"[ERR] {symbol} not mapped to Yahoo Finance ticker")
+        return pd.DataFrame()
+
+    yahoo_symbol = SYMBOL_MAP[symbol]
+    try:
+        df = yf.download(yahoo_symbol, period=period, interval=interval, progress=False)
+        df.reset_index(inplace=True)
+    except Exception as e:
+        print(f"[ERR] Yahoo fetch failed for {symbol}: {e}")
+        return pd.DataFrame()
+
+    # Ensure OHLCV columns are present
+    if not {"Open", "High", "Low", "Close", "Volume"}.issubset(df.columns):
+        print(f"[ERR] Missing OHLC columns in Yahoo data for {symbol}")
+        return pd.DataFrame()
+
+    return df
