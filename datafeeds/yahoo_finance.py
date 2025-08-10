@@ -5,12 +5,12 @@ def fetch_yahoo(symbol, period="90d", interval="1d"):
     """Fetch OHLCV data from Yahoo Finance for the given symbol."""
     try:
         df = yf.download(
-            symbol,
-            period=period,
-            interval=interval,
-            progress=False,
-            auto_adjust=False  # << Force raw OHLC data
-        )
+    symbol,
+    period=period,
+    interval=interval,
+    progress=False,
+    auto_adjust=False  # << Force raw OHLCV
+)
         df.reset_index(inplace=True)
     except Exception as e:
         print(f"[ERR] Yahoo fetch failed for {symbol}: {e}")
@@ -23,6 +23,8 @@ def fetch_yahoo(symbol, period="90d", interval="1d"):
         return pd.DataFrame()
 
     return df
+    fetch_yahoo_data = fetch_yahoo
+
 
 
 
