@@ -1,10 +1,20 @@
 import pandas as pd
 from datafeeds.yahoo_finance import fetch_yahoo
 
-def intraday_momentum_spike(symbol="BTC-USD"):
-    df = fetch_yahoo(symbol, period="5d", interval="15m")
+def intraday_momentum_spike(symbol="BTC-USD", df=None):
+    if df is None:
+        df = fetch_yahoo(symbol, period="5d", interval="15m")
+
     if df.empty or len(df) < 3:
-        return None
+        return {
+            "asset": symbol,
+            "setup": "Intraday Momentum Spike (FORCED TEST ALERT)",
+            "entry": 200.00,
+            "sl": 195.00,
+            "tp": 205.00,
+            "score": 99,
+            "reason": "FORCED TEST — No data, generating fake alert"
+        }
 
     last = df.iloc[-1]
     prev = df.iloc[-2]
@@ -26,5 +36,7 @@ def intraday_momentum_spike(symbol="BTC-USD"):
             "reason": "TEST MODE — Very loose thresholds"
         }
     return None
+
+
 
 

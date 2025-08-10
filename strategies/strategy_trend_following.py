@@ -8,10 +8,20 @@ def _rsi(series, period=14):
     rs = gain / (loss.replace(0, 1e-9))
     return 100 - (100 / (1 + rs))
 
-def trend_following_signal(symbol="BTC-USD"):
-    df = fetch_yahoo(symbol, period="180d", interval="1d")
+def trend_following_signal(symbol="BTC-USD", df=None):
+    if df is None:
+        df = fetch_yahoo(symbol, period="180d", interval="1d")
+
     if df.empty or len(df) < 50:
-        return None
+        return {
+            "asset": symbol,
+            "setup": "Trend-Following Dip Buy (FORCED TEST ALERT)",
+            "entry": 400.00,
+            "sl": 390.00,
+            "tp": 410.00,
+            "score": 99,
+            "reason": "FORCED TEST — No data, generating fake alert"
+        }
 
     df["MA20"] = df["Close"].rolling(20).mean()
     df["MA50"] = df["Close"].rolling(50).mean()
@@ -37,4 +47,6 @@ def trend_following_signal(symbol="BTC-USD"):
             "reason": "TEST MODE — Loosened RSI & smaller TP"
         }
     return None
+
+
 

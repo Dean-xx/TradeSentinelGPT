@@ -15,3 +15,4 @@ if __name__ == "__main__":
     print("[INFO] Running TradeSentinelGPT scanner...")
     main()
     print("[INFO] Done.")
+    python run.py

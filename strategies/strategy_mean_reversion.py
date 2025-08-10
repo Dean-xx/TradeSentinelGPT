@@ -8,10 +8,20 @@ def _rsi(series, period=14):
     rs = gain / (loss.replace(0, 1e-9))
     return 100 - (100 / (1 + rs))
 
-def mean_reversion_signal(symbol="BTC-USD"):
-    df = fetch_yahoo(symbol, period="90d", interval="1d")
+def mean_reversion_signal(symbol="BTC-USD", df=None):
+    if df is None:
+        df = fetch_yahoo(symbol, period="90d", interval="1d")
+
     if df.empty:
-        return None
+        return {
+            "asset": symbol,
+            "setup": "Range Mean Reversion (FORCED TEST ALERT)",
+            "entry": 300.00,
+            "sl": 290.00,
+            "tp": 310.00,
+            "score": 99,
+            "reason": "FORCED TEST — No data, generating fake alert"
+        }
 
     recent = df.tail(30).copy()
     recent["RSI"] = _rsi(recent["Close"], 14)
@@ -32,5 +42,6 @@ def mean_reversion_signal(symbol="BTC-USD"):
             "reason": "TEST MODE — Loosened RSI & price thresholds"
         }
     return None
+
 
 
