@@ -1,30 +1,36 @@
-# alerts/telegram_bot.py
+import os
 import requests
 
-BOT_TOKEN = "8200971014:AAGWugellSz1AgfFfsellta1zlCfoH9a-sU"
-CHAT_ID = "7812175706"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def send_telegram_alert(signal):
     """
-    Sends a formatted trade alert to your Telegram chat.
+    Sends a trade alert to Telegram with a clear [LIVE] or [TEST] label.
     """
-    if not BOT_TOKEN or not CHAT_ID:
-        print("[WARN] Telegram not configured.")
-        return
 
+    # Determine test/live status
+    is_test = "FORCED TEST" in signal["setup"] or "TEST MODE" in signal["setup"]
+    status_label = "🟡 [TEST]" if is_test else "🟢 [LIVE]"
+
+    # Build the message
     message = (
-        f"📈 {signal['asset']}\n"
-        f"🧠 Setup: {signal['setup']}\n"
-        f"🎯 Entry: {signal['entry']} | SL: {signal['sl']} | TP: {signal['tp']}\n"
-        f"✅ Score: {signal['score']}\n"
-        f"📊 Reason: {signal['reason']}"
+        f"{status_label} Trade Alert\n"
+        f"📊 Asset: {signal['asset']}\n"
+        f"⚙ Setup: {signal['setup']}\n"
+        f"💵 Entry: {signal['entry']}\n"
+        f"🛑 Stop Loss: {signal['sl']}\n"
+        f"🎯 Take Profit: {signal['tp']}\n"
+        f"📈 Score: {signal['score']}\n"
+        f"📝 Reason: {signal['reason']}"
     )
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message}
+    # Send the message
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     try:
-        r = requests.post(url, data=payload, timeout=10)
-        if r.status_code != 200:
-            print(f"[ERROR] Telegram send failed: {r.text}")
+        r = requests.post(url, json=payload, timeout=10)
+        r.raise_for_status()
+        print(f"[OK] Telegram alert sent for {signal['asset']}")
     except Exception as e:
-        print(f"[ERROR] {e}")
+        print(f"[ERR] Failed to send Telegram alert: {e}")
