@@ -1,7 +1,7 @@
 import pandas as pd
 from datafeeds.yahoo_finance import fetch_yahoo
 
-def breakout_retest_signal(symbol, lookback=20):
+def breakout_retest_signal(symbol="BTC-USD", lookback=20):
     df = fetch_yahoo(symbol, period="180d", interval="1d")
     if df.empty:
         return None
@@ -9,7 +9,7 @@ def breakout_retest_signal(symbol, lookback=20):
     recent_high = df["High"].iloc[-lookback:].max()
     last_close = df["Close"].iloc[-1]
 
-    # TEST MODE: Trigger if price is within 5% of recent high
+    # Test Mode: Loose trigger
     if last_close >= recent_high * 0.95:
         prev_low = df["Low"].iloc[-2]
         return {

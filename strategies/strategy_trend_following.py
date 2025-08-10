@@ -18,7 +18,6 @@ def trend_following_signal(symbol="BTC-USD"):
     df["RSI"] = _rsi(df["Close"], period=14)
     last = df.iloc[-1]
 
-    # TEST MODE: Allow RSI up to 80 to trigger
     if (
         pd.notnull(last["MA20"]) and
         pd.notnull(last["MA50"]) and
