@@ -3,12 +3,21 @@ import yfinance as yf
 
 # Map Binance-style symbols to Yahoo Finance tickers
 SYMBOL_MAP = {
+    # Binance-style → Yahoo-style
     "BTCUSDT": "BTC-USD",
     "ETHUSDT": "ETH-USD",
     "BNBUSDT": "BNB-USD",
     "XRPUSDT": "XRP-USD",
     "SOLUSDT": "SOL-USD",
-    # You can add forex/stocks here:
+
+    # Yahoo-style → Yahoo-style (so already-formatted tickers pass through)
+    "BTC-USD": "BTC-USD",
+    "ETH-USD": "ETH-USD",
+    "BNB-USD": "BNB-USD",
+    "XRP-USD": "XRP-USD",
+    "SOL-USD": "SOL-USD",
+
+    # Extras for testing
     "EURUSD": "EURUSD=X",
     "GBPUSD": "GBPUSD=X",
     "AAPL": "AAPL"
