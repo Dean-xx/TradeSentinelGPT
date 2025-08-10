@@ -1,73 +1,29 @@
-import pandas as pd
-from strategies.strategy_trend_following import trend_following_signal
-from strategies.strategy_mean_reversion import mean_reversion_signal
 from strategies.strategy_breakout_retest import breakout_retest_signal
 from strategies.strategy_intraday_momentum import intraday_momentum_spike
-from datafeeds.yahoo_finance import fetch_yahoo_data
-from alerts.telegram_bot import send_telegram_alert
-import os
-
-# Map our symbols to Yahoo Finance tickers
-symbol_map = {
-    "BTCUSDT": "BTC-USD",
-    "ETHUSDT": "ETH-USD",
-    "BNBUSDT": "BNB-USD",
-    "XRPUSDT": "XRP-USD",
-    "SOLUSDT": "SOL-USD"
-}
-
-ASSETS = list(symbol_map.keys())
-
-def ensure_logs_dir():
-    os.makedirs("logs", exist_ok=True)
+from strategies.strategy_mean_reversion import mean_reversion_signal
+from strategies.strategy_trend_following import trend_following_signal
 
 def main():
-    print("[INFO] Running TradeSentinelGPT scanner...")
-    ensure_logs_dir()
-    signals = []
+    symbols = [
+        "BTC-USD",
+        "ETH-USD",
+        "BNB-USD",
+        "XRP-USD",
+        "SOL-USD",
+        "EURUSD=X",
+        "GBPUSD=X",
+        "AAPL"
+    ]
 
-    for symbol in ASSETS:
-        df = fetch_yahoo_data(symbol_map[symbol])
-        if df is None or df.empty:
-            print(f"[WARN] No data for {symbol}")
-            continue
+    for symbol in symbols:
+        print(f"[SCAN] Checking {symbol}...")
 
-        # Strategy 1: Trend-following dip buy
-        sig1 = trend_following_signal(df)
-        if sig1:
-            sig1['asset'] = symbol
-            signals.append(sig1)
-            send_telegram_alert(sig1)
+        sig1 = breakout_retest_signal(symbol)
+        sig2 = intraday_momentum_spike(symbol)
+        sig3 = mean_reversion_signal(symbol)
+        sig4 = trend_following_signal(symbol)
 
-        # Strategy 2: Range mean reversion
-        sig2 = mean_reversion_signal(symbol)
-        if sig2:
-            sig2['asset'] = symbol
-            signals.append(sig2)
-            send_telegram_alert(sig2)
+        for sig in [sig1, sig2, sig3, sig4]:
+            if sig:
+                print(f"[ALERT] {sig}")
 
-        # Strategy 3: Breakout & Retest
-        sig3 = breakout_retest_signal(symbol)
-        if sig3:
-            sig3['asset'] = symbol
-            signals.append(sig3)
-            send_telegram_alert(sig3)
-
-        # Strategy 4: Intraday Momentum Spike
-        sig4 = intraday_momentum_spike(symbol)
-        if sig4:
-            sig4['asset'] = symbol
-            signals.append(sig4)
-            send_telegram_alert(sig4)
-
-    # Save results
-    if signals:
-        out_df = pd.DataFrame(signals)
-        out_df.to_csv("logs/trades.csv", index=False)
-        print(f"[OK] {len(signals)} signal(s) saved to logs/trades.csv")
-    else:
-        print("[OK] No valid setups today.")
-    print("[INFO] Done.")
-
-if __name__ == "__main__":
-    main()

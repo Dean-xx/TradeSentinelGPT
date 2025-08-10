@@ -8,7 +8,7 @@ def _rsi(series, period=14):
     rs = gain / (loss.replace(0, 1e-9))
     return 100 - (100 / (1 + rs))
 
-def trend_following_signal(symbol="BTCUSDT"):
+def trend_following_signal(symbol="BTC-USD"):
     df = fetch_yahoo(symbol, period="180d", interval="1d")
     if df.empty or len(df) < 50:
         return None
@@ -27,7 +27,7 @@ def trend_following_signal(symbol="BTCUSDT"):
     ):
         entry = float(last["Close"])
         sl = float(last["MA50"])
-        tp = entry * 1.01  # smaller TP for quick trigger
+        tp = entry * 1.01
         return {
             "asset": symbol,
             "setup": "Trend-Following Dip Buy (TEST MODE)",
