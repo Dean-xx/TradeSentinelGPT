@@ -5,8 +5,9 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
     if df is None:
         df = fetch_yahoo(symbol, period="180d", interval="1d")
 
-    if df.empty:
-        print(f"[WARN] No data for {symbol} — using fake data for test alert.")
+    # Force test alert if no data, missing columns, or too few rows
+    if df.empty or not {"High", "Low", "Close"}.issubset(df.columns) or len(df) < 2:
+        print(f"[WARN] Invalid breakout retest data for {symbol} — using fake test alert.")
         return {
             "asset": symbol,
             "setup": "Breakout Retest (FORCED TEST ALERT)",
@@ -14,17 +15,8 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
             "sl": 95.00,
             "tp": 105.00,
             "score": 99,
-            "reason": "FORCED TEST — No data, generating fake alert"
+            "reason": "FORCED TEST — Missing/invalid data"
         }
-
-    required_cols = {"High", "Low", "Close"}
-    if not required_cols.issubset(df.columns):
-        print(f"[WARN] Missing OHLC columns for {symbol} — skipping.")
-        return None
-
-    if len(df) < 2:
-        print(f"[WARN] Not enough rows for breakout retest on {symbol} — skipping.")
-        return None
 
     recent_high = df["High"].iloc[-lookback:].max()
     last_close = df["Close"].iloc[-1]
@@ -40,5 +32,4 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
             "score": 90,
             "reason": "TEST MODE — Price near recent high"
         }
-
     return None

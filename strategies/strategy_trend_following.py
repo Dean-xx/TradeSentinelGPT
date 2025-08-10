@@ -12,8 +12,9 @@ def trend_following_signal(symbol="BTC-USD", df=None):
     if df is None:
         df = fetch_yahoo(symbol, period="180d", interval="1d")
 
-    if df.empty:
-        print(f"[WARN] No data for {symbol} — using fake data for test alert.")
+    # Force test alert if no data, missing columns, or too few rows
+    if df.empty or not {"Close"}.issubset(df.columns) or len(df) < 50:
+        print(f"[WARN] Invalid trend following data for {symbol} — using fake test alert.")
         return {
             "asset": symbol,
             "setup": "Trend-Following Dip Buy (FORCED TEST ALERT)",
@@ -21,17 +22,8 @@ def trend_following_signal(symbol="BTC-USD", df=None):
             "sl": 390.00,
             "tp": 410.00,
             "score": 99,
-            "reason": "FORCED TEST — No data, generating fake alert"
+            "reason": "FORCED TEST — Missing/invalid data"
         }
-
-    required_cols = {"Close"}
-    if not required_cols.issubset(df.columns):
-        print(f"[WARN] Missing required columns for trend following on {symbol} — skipping.")
-        return None
-
-    if len(df) < 50:
-        print(f"[WARN] Not enough rows for trend following on {symbol} — skipping.")
-        return None
 
     df["MA20"] = df["Close"].rolling(20).mean()
     df["MA50"] = df["Close"].rolling(50).mean()
@@ -56,5 +48,4 @@ def trend_following_signal(symbol="BTC-USD", df=None):
             "score": 85,
             "reason": "TEST MODE — Loosened RSI & smaller TP"
         }
-
     return None
