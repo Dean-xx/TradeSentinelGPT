@@ -1,9 +1,9 @@
 import time
-from datafeeds.yahoo_finance import fetch_yahoo
 from strategies.strategy_breakout_retest import breakout_retest_signal
 from strategies.strategy_intraday_momentum import intraday_momentum_spike
 from strategies.strategy_mean_reversion import mean_reversion_signal
 from strategies.strategy_trend_following import trend_following_signal
+from alerts.telegram_bot import send_telegram_alert  # <-- make sure this import works
 
 def main():
     symbols = [
@@ -13,30 +13,19 @@ def main():
 
     for i, symbol in enumerate(symbols, 1):
         print(f"[SCAN] Checking {symbol} ({i}/{len(symbols)})...")
-
-        # Fetch data once per symbol
-        df_daily = fetch_yahoo(symbol, period="180d", interval="1d")
-        df_intraday = fetch_yahoo(symbol, period="5d", interval="15m")
+        time.sleep(5)  # Slow down requests to avoid Yahoo 429 errors
 
         sigs = [
-            breakout_retest_signal(symbol, df=df_daily),
-            mean_reversion_signal(symbol, df=df_daily),
-            trend_following_signal(symbol, df=df_daily),
-            intraday_momentum_spike(symbol, df=df_intraday),
+            breakout_retest_signal(symbol),
+            mean_reversion_signal(symbol),
+            trend_following_signal(symbol),
+            intraday_momentum_spike(symbol),
         ]
 
         for sig in sigs:
             if sig:
-                # Identify forced test alerts
-                is_test = "FORCED TEST" in sig["setup"] or "TEST MODE" in sig["setup"]
-                label = "[TEST]" if is_test else "[LIVE]"
-                print(f"[ALERT] {label} {sig}")
-                # send_telegram_alert(sig)  # Uncomment for live alerts
-
-        # Avoid Yahoo rate-limits
-        time.sleep(5)
+                print(f"[ALERT] [TEST] {sig}")
+                # Send to Telegram
+                send_telegram_alert(sig)
 
     print("[INFO] Scan complete.")
-
-if __name__ == "__main__":
-    main()
