@@ -3,7 +3,7 @@ import json
 
 # Hardcoded for testing (replace with env vars in production)
 BOT_TOKEN = "8200971014:AAGWugellSz1AgfFfsellta1zlCfoH9a-sU"
-CHAT_ID = "<YOUR_CHAT_ID>"  # Replace with your actual Telegram user or group chat ID
+CHAT_ID = "7812175706"  # Replace with your actual Telegram user or group chat ID
 
 def send_telegram_alert(alert_data, test_mode=False):
     """Send a formatted alert message to Telegram."""
