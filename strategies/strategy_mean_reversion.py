@@ -13,6 +13,7 @@ def mean_reversion_signal(symbol="BTC-USD", df=None):
         df = fetch_yahoo(symbol, period="90d", interval="1d")
 
     if df.empty:
+        print(f"[WARN] No data for {symbol} — using fake data for test alert.")
         return {
             "asset": symbol,
             "setup": "Range Mean Reversion (FORCED TEST ALERT)",
@@ -22,6 +23,15 @@ def mean_reversion_signal(symbol="BTC-USD", df=None):
             "score": 99,
             "reason": "FORCED TEST — No data, generating fake alert"
         }
+
+    required_cols = {"Close"}
+    if not required_cols.issubset(df.columns):
+        print(f"[WARN] Missing required columns for mean reversion on {symbol} — skipping.")
+        return None
+
+    if len(df) < 2:
+        print(f"[WARN] Not enough rows for mean reversion on {symbol} — skipping.")
+        return None
 
     recent = df.tail(30).copy()
     recent["RSI"] = _rsi(recent["Close"], 14)
@@ -41,7 +51,5 @@ def mean_reversion_signal(symbol="BTC-USD", df=None):
             "score": 85,
             "reason": "TEST MODE — Loosened RSI & price thresholds"
         }
+
     return None
-
-
-

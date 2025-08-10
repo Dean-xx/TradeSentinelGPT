@@ -5,7 +5,8 @@ def intraday_momentum_spike(symbol="BTC-USD", df=None):
     if df is None:
         df = fetch_yahoo(symbol, period="5d", interval="15m")
 
-    if df.empty or len(df) < 3:
+    if df.empty:
+        print(f"[WARN] No intraday data for {symbol} — using fake data for test alert.")
         return {
             "asset": symbol,
             "setup": "Intraday Momentum Spike (FORCED TEST ALERT)",
@@ -13,8 +14,17 @@ def intraday_momentum_spike(symbol="BTC-USD", df=None):
             "sl": 195.00,
             "tp": 205.00,
             "score": 99,
-            "reason": "FORCED TEST — No data, generating fake alert"
+            "reason": "FORCED TEST — No intraday data, generating fake alert"
         }
+
+    required_cols = {"Close", "Volume"}
+    if not required_cols.issubset(df.columns):
+        print(f"[WARN] Missing required columns for intraday momentum on {symbol} — skipping.")
+        return None
+
+    if len(df) < 3:
+        print(f"[WARN] Not enough rows for intraday momentum on {symbol} — skipping.")
+        return None
 
     last = df.iloc[-1]
     prev = df.iloc[-2]
@@ -33,8 +43,9 @@ def intraday_momentum_spike(symbol="BTC-USD", df=None):
             "sl": round(sl, 2),
             "tp": round(tp, 2),
             "score": 88,
-            "reason": "TEST MODE — Very loose thresholds"
+            "reason": "TEST MODE — Loosened thresholds"
         }
+
     return None
 
 

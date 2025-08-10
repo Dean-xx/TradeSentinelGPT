@@ -14,11 +14,10 @@ def main():
     for i, symbol in enumerate(symbols, 1):
         print(f"[SCAN] Checking {symbol} ({i}/{len(symbols)})...")
 
-        # Fetch daily and intraday data ONCE per symbol
+        # Fetch data once per symbol
         df_daily = fetch_yahoo(symbol, period="180d", interval="1d")
         df_intraday = fetch_yahoo(symbol, period="5d", interval="15m")
 
-        # Pass pre-fetched dataframes to strategies
         sigs = [
             breakout_retest_signal(symbol, df=df_daily),
             mean_reversion_signal(symbol, df=df_daily),
@@ -28,18 +27,16 @@ def main():
 
         for sig in sigs:
             if sig:
-                print(f"[ALERT] {sig}")
+                # Identify forced test alerts
+                is_test = "FORCED TEST" in sig["setup"] or "TEST MODE" in sig["setup"]
+                label = "[TEST]" if is_test else "[LIVE]"
+                print(f"[ALERT] {label} {sig}")
                 # send_telegram_alert(sig)  # Uncomment for live alerts
 
-        # Wait to avoid Yahoo 429 rate-limits
+        # Avoid Yahoo rate-limits
         time.sleep(5)
 
     print("[INFO] Scan complete.")
 
 if __name__ == "__main__":
     main()
-
-
-
-
-

@@ -2,15 +2,9 @@ import pandas as pd
 from datafeeds.yahoo_finance import fetch_yahoo
 
 def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
-    """
-    Detect breakout & retest setups.
-    Falls back to forced test alert if df is empty.
-    Skips symbol if not enough rows to calculate safely.
-    """
     if df is None:
         df = fetch_yahoo(symbol, period="180d", interval="1d")
 
-    # --- Fallback for empty Yahoo data ---
     if df.empty:
         print(f"[WARN] No data for {symbol} — using fake data for test alert.")
         return {
@@ -23,7 +17,6 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
             "reason": "FORCED TEST — No data, generating fake alert"
         }
 
-    # --- Data safety check ---
     required_cols = {"High", "Low", "Close"}
     if not required_cols.issubset(df.columns):
         print(f"[WARN] Missing OHLC columns for {symbol} — skipping.")
@@ -33,7 +26,6 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
         print(f"[WARN] Not enough rows for breakout retest on {symbol} — skipping.")
         return None
 
-    # --- Normal breakout/retest logic ---
     recent_high = df["High"].iloc[-lookback:].max()
     last_close = df["Close"].iloc[-1]
     prev_low = df["Low"].iloc[-2]
@@ -50,8 +42,3 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
         }
 
     return None
-
-
-
-
-
