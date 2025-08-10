@@ -1,78 +1,71 @@
 import pandas as pd
-from datafeeds.yahoo_finance import fetch_yahoo_data
+import requests
 
-def breakout_retest_signal(symbol="BTCUSDT", lookback=20):
-    """
-    Breakout & Retest:
-    - Price breaks above the highest high in the last `lookback` days
-    - Then pulls back to retest that breakout level
-    """
+# -------------------------------
+# Fetch OHLC data from Binance
+# -------------------------------
+def _fetch_klines(symbol, interval="1d", limit=100):
+    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        print(f"[ERR] HTTP error fetching {symbol} {interval}: {e}")
+        return pd.DataFrame()
+    except requests.exceptions.RequestException as e:
+        print(f"[ERR] Network error fetching {symbol} {interval}: {e}")
+        return pd.DataFrame()
 
-    # Map Binance-style symbols to Yahoo Finance tickers
-    symbol_map = {
-        "BTCUSDT": "BTC-USD",
-        "ETHUSDT": "ETH-USD",
-        "BNBUSDT": "BNB-USD",
-        "XRPUSDT": "XRP-USD",
-        "SOLUSDT": "SOL-USD"
+    data = r.json()
+    if not data:
+        print(f"[ERR] No data returned for {symbol} {interval}")
+        return pd.DataFrame()
+
+    # Assign Binance's kline array to named columns
+    df = pd.DataFrame(data, columns=[
+        "OpenTime", "Open", "High", "Low", "Close", "Volume",
+        "CloseTime", "QuoteAssetVolume", "NumberOfTrades",
+        "TakerBuyBaseVol", "TakerBuyQuoteVol", "Ignore"
+    ])
+
+    # Convert numeric columns
+    for col in ["Open", "High", "Low", "Close", "Volume"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    return df
+
+
+# -------------------------------
+# Breakout & Retest Strategy
+# -------------------------------
+def breakout_retest_signal(symbol, lookback=20):
+    df = _fetch_klines(symbol=symbol, interval="1d", limit=lookback+5)
+
+    # Skip if no data or missing OHLC columns
+    required_cols = {"Open", "High", "Low", "Close"}
+    if df.empty or not required_cols.issubset(df.columns):
+        print(f"[ERR] Missing OHLC columns for {symbol}, skipping.")
+        return None
+
+    # Identify highest high in lookback period
+    recent_high = df["High"].iloc[-lookback:].max()
+
+    # Check for breakout above recent high
+    last_close = df["Close"].iloc[-1]
+    if last_close <= recent_high:
+        return None  # No breakout
+
+    # Confirm a retest (yesterday's low <= breakout level)
+    prev_low = df["Low"].iloc[-2]
+    if prev_low > recent_high:
+        return None  # No retest
+
+    # If criteria met, return signal details
+    return {
+        "symbol": symbol,
+        "setup": "Breakout Retest",
+        "entry": last_close,
+        "stop_loss": prev_low,
+        "take_profit": last_close + (last_close - prev_low) * 2,  # 2:1 RR
+        "score": 75  # Example score, could be made dynamic
     }
-
-    if symbol not in symbol_map:
-        print(f"[ERR] {symbol} not supported in breakout_retest_signal")
-        return None
-
-    df = fetch_yahoo_data(symbol_map[symbol], period="90d", interval="1d")
-
-    if df is None or df.empty:
-        print(f"[WARN] No data for {symbol}")
-        return None
-
-    # Handle MultiIndex (flatten if needed)
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [' '.join(col).strip() for col in df.columns.values]
-
-    # Find the close/high/low columns
-    close_col = next((col for col in df.columns if col.lower() == "close"), None)
-    high_col = next((col for col in df.columns if col.lower() == "high"), None)
-    low_col = next((col for col in df.columns if col.lower() == "low"), None)
-
-    if not close_col or not high_col or not low_col:
-        print("[ERR] Missing OHLC columns in breakout_retest_signal")
-        return None
-
-    # Ensure numeric
-    df[close_col] = pd.to_numeric(df[close_col], errors="coerce")
-    df[high_col] = pd.to_numeric(df[high_col], errors="coerce")
-    df[low_col] = pd.to_numeric(df[low_col], errors="coerce")
-
-    # Determine breakout level
-    recent_high = df[high_col].rolling(lookback).max()
-    breakout_level = recent_high.shift(1)  # Yesterday's highest high
-
-    last = df.iloc[-1]
-    prev = df.iloc[-2]
-
-    # Check if yesterday was a breakout
-    breakout_yesterday = prev[close_col] > breakout_level.iloc[-2]
-
-    # Check if today pulled back near breakout level
-    retest_today = abs(last[low_col] - breakout_level.iloc[-1]) / breakout_level.iloc[-1] < 0.005  # within 0.5%
-
-    if breakout_yesterday and retest_today:
-        entry = last[close_col]
-        sl = breakout_level.iloc[-1] * 0.98  # 2% below breakout level
-        tp = breakout_level.iloc[-1] * 1.04  # 4% above breakout level
-        score = 78
-        reason = "Breakout above recent highs, followed by retest near breakout level"
-
-        return {
-            "asset": symbol,
-            "setup": "Breakout & Retest",
-            "entry": round(entry, 2),
-            "sl": round(sl, 2),
-            "tp": round(tp, 2),
-            "score": score,
-            "reason": reason,
-        }
-
-    return None

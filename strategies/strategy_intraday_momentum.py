@@ -1,29 +1,58 @@
-# strategies/strategy_intraday_momentum.py
-# TEMPORARY: Loosened rules for forced signal test
-# TODO: Revert to strict rules after Telegram confirmation
-
 import pandas as pd
 import requests
 
+# -------------------------------
+# Fetch intraday OHLC data from Binance
+# -------------------------------
 def _fetch_intraday(symbol="BTCUSDT", interval="15m", limit=96):
     url = "https://api.binance.com/api/v3/klines"
     params = {"symbol": symbol, "interval": interval, "limit": limit}
-    r = requests.get(url, params=params, timeout=15)
-    r.raise_for_status()
+
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        print(f"[ERR] HTTP error fetching {symbol} {interval}: {e}")
+        return pd.DataFrame()
+    except requests.exceptions.RequestException as e:
+        print(f"[ERR] Network error fetching {symbol} {interval}: {e}")
+        return pd.DataFrame()
+
     data = r.json()
-    cols = ["open_time","open","high","low","close","volume","close_time"]
-    df = pd.DataFrame([[row[0], row[1], row[2], row[3], row[4], row[5], row[6]] for row in data], columns=cols)
-    for c in ["open","high","low","close","volume"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+    if not data:
+        print(f"[ERR] No intraday data returned for {symbol} {interval}")
+        return pd.DataFrame()
+
+    # Build dataframe
+    df = pd.DataFrame(data, columns=[
+        "open_time", "open", "high", "low", "close", "volume",
+        "close_time", "quote_asset_volume", "number_of_trades",
+        "taker_buy_base_vol", "taker_buy_quote_vol", "ignore"
+    ])
+
+    # Convert numeric columns
+    for col in ["open", "high", "low", "close", "volume"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
     return df
 
+
+# -------------------------------
+# Intraday Momentum Spike Strategy
+# -------------------------------
 def intraday_momentum_spike(symbol="BTCUSDT"):
     df = _fetch_intraday(symbol, interval="15m", limit=100)
+
+    # Ensure we have enough candles & OHLC data
+    required_cols = {"open", "high", "low", "close", "volume"}
+    if df.empty or not required_cols.issubset(df.columns) or len(df) < 3:
+        print(f"[ERR] Missing or insufficient OHLC data for {symbol}, skipping.")
+        return None
 
     last = df.iloc[-1]
     prev = df.iloc[-2]
 
-    # Loosened: price change >= 0.1% instead of 1.5%, volume > 1.0x avg instead of 2.0x
+    # Temporary loose test rules (change later for production)
     price_change = (last["close"] - prev["close"]) / prev["close"] * 100
     avg_vol = df["volume"].rolling(20).mean().iloc[-1]
 
