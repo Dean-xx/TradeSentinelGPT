@@ -1,27 +1,51 @@
-import pandas as pd
+# strategies/strategy_breakout_retest.py
 from datafeeds.yahoo_finance import fetch_yahoo
 
-def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
-    if df is None:
-        df = fetch_yahoo(symbol, period="180d", interval="1d")
+def breakout_retest_signal(symbol, lookback=120):
+    """
+    Returns a signal dict or None.
+    Simple, non-spammy placeholder logic:
+    - Looks for a recent breakout above a 20-day high
+    - Then a pullback (retest) close back near that level
+    - And a small curl up
+    """
+    df = fetch_yahoo(symbol, period=f"{lookback}d", interval="1d", max_retries=2)
 
-    # If data is missing/invalid, skip this symbol
-if df.empty or not {"High", "Low", "Close"}.issubset(df.columns) or len(df) < 2:
-    print(f"[WARN] Invalid breakout retest data for {symbol} — skipping")
-    return None
+    # Guard: data must exist and have required columns
+    required = {"High", "Low", "Close"}
+    if df is None or df.empty or not required.issubset(df.columns) or len(df) < 30:
+        print(f"[WARN] Invalid breakout retest data for {symbol} — skipping")
+        return None
 
-    recent_high = df["High"].iloc[-lookback:].max()
-    last_close = df["Close"].iloc[-1]
-    prev_low = df["Low"].iloc[-2]
+    # Prior 20-day high (exclude last 3 candles so we don't "peek")
+    recent = df.iloc[:-3]
+    breakout_level = recent["High"].tail(20).max()
 
-    if last_close >= recent_high * 0.95:
+    last_close = float(df["Close"].iloc[-1])
+    prev_close = float(df["Close"].iloc[-2])
+
+    # Breakout then retest conditions (very simple placeholder):
+    # - previous close above breakout level
+    # - latest close is within ~1% of the level (a retest)
+    # - latest close didn't sell off further (curling up vs prev)
+    tolerance = 0.01 * breakout_level
+    near_level = abs(last_close - breakout_level) <= tolerance
+    broke_above = prev_close > breakout_level
+    curling_up = last_close >= prev_close
+
+    if broke_above and near_level and curling_up:
+        entry = last_close
+        sl = breakout_level * 0.985  # ~1.5% below level
+        tp = breakout_level * 1.03   # ~3% above level
         return {
-            "asset": symbol,
-            "setup": "Breakout Retest (TEST MODE)",
-            "entry": round(last_close, 2),
-            "sl": round(prev_low, 2),
-            "tp": round(last_close * 1.02, 2),
-            "score": 90,
-            "reason": "TEST MODE — Price near recent high"
+            "side": "long",
+            "entry": round(entry, 2),
+            "sl": round(sl, 2),
+            "tp": round(tp, 2),
+            "confidence": 65,
+            "reason": f"Retest of {round(breakout_level,2)} after breakout; holding above level",
+            "setup": "Breakout Retest"
         }
+
     return None
+
