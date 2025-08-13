@@ -12,18 +12,10 @@ def trend_following_signal(symbol="BTC-USD", df=None):
     if df is None:
         df = fetch_yahoo(symbol, period="180d", interval="1d")
 
-    # Force test alert if no data, missing columns, or too few rows
-    if df.empty or not {"Close"}.issubset(df.columns) or len(df) < 50:
-        print(f"[WARN] Invalid trend following data for {symbol} — using fake test alert.")
-        return {
-            "asset": symbol,
-            "setup": "Trend-Following Dip Buy (FORCED TEST ALERT)",
-            "entry": 400.00,
-            "sl": 390.00,
-            "tp": 410.00,
-            "score": 99,
-            "reason": "FORCED TEST — Missing/invalid data"
-        }
+     # If data is missing/invalid, skip this symbol
+if df.empty or not {"High", "Low", "Close"}.issubset(df.columns) or len(df) < 2:
+    print(f"[WARN] Invalid breakout retest data for {symbol} — skipping")
+    return None
 
     df["MA20"] = df["Close"].rolling(20).mean()
     df["MA50"] = df["Close"].rolling(50).mean()
