@@ -12,18 +12,10 @@ def mean_reversion_signal(symbol="BTC-USD", df=None):
     if df is None:
         df = fetch_yahoo(symbol, period="90d", interval="1d")
 
-    # Force test alert if no data, missing columns, or too few rows
-    if df.empty or not {"Close"}.issubset(df.columns) or len(df) < 2:
-        print(f"[WARN] Invalid mean reversion data for {symbol} — using fake test alert.")
-        return {
-            "asset": symbol,
-            "setup": "Range Mean Reversion (FORCED TEST ALERT)",
-            "entry": 300.00,
-            "sl": 290.00,
-            "tp": 310.00,
-            "score": 99,
-            "reason": "FORCED TEST — Missing/invalid data"
-        }
+    # If data is missing/invalid, skip this symbol
+if df.empty or not {"High", "Low", "Close"}.issubset(df.columns) or len(df) < 2:
+    print(f"[WARN] Invalid breakout retest data for {symbol} — skipping")
+    return None
 
     recent = df.tail(30).copy()
     recent["RSI"] = _rsi(recent["Close"], 14)

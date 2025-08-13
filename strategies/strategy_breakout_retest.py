@@ -5,18 +5,10 @@ def breakout_retest_signal(symbol="BTC-USD", df=None, lookback=20):
     if df is None:
         df = fetch_yahoo(symbol, period="180d", interval="1d")
 
-    # Force test alert if no data, missing columns, or too few rows
-    if df.empty or not {"High", "Low", "Close"}.issubset(df.columns) or len(df) < 2:
-        print(f"[WARN] Invalid breakout retest data for {symbol} — using fake test alert.")
-        return {
-            "asset": symbol,
-            "setup": "Breakout Retest (FORCED TEST ALERT)",
-            "entry": 100.00,
-            "sl": 95.00,
-            "tp": 105.00,
-            "score": 99,
-            "reason": "FORCED TEST — Missing/invalid data"
-        }
+    # If data is missing/invalid, skip this symbol
+if df.empty or not {"High", "Low", "Close"}.issubset(df.columns) or len(df) < 2:
+    print(f"[WARN] Invalid breakout retest data for {symbol} — skipping")
+    return None
 
     recent_high = df["High"].iloc[-lookback:].max()
     last_close = df["Close"].iloc[-1]
